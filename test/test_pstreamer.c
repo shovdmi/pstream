@@ -14,5 +14,25 @@ void tearDown(void)
 
 void test_pstreamer_NeedToImplement(void)
 {
-    TEST_IGNORE_MESSAGE("Need to Implement pstreamer");
+
+	uint8_t test_data[] = { 0, 1, 2, 3, 4, 5, 6, 7};
+
+	mutex_lock_ExpectAndReturn(0, 0);
+
+	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
+
+	for (int i = 0; i < sizeof(test_data) ;i++)
+	{
+		usart_transmit_ExpectAndReturn(test_data[i], TRANSMIT_OK);
+	}
+
+	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
+
+	mutex_unlock_ExpectAndReturn(0, 0);
+	
+
+	int result = transmit_data(&test_data[0], sizeof(test_data));
+	TEST_ASSERT_EQUAL_INT(TRANSMIT_OK, result);
+
+	//TEST_IGNORE_MESSAGE("Need to Implement pstreamer");
 }
