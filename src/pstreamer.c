@@ -1,10 +1,12 @@
 #include "unity.h"
-#include "uart.h"
+#include "stdint.h"
+#include "usart.h"
+#include "mutex.h"
 #include "pstreamer.h"
 
 mutex_t bus_mutex;
 
-int transmit_data(uint8_t data, uint32_t size)
+int transmit_data(uint8_t *data, size_t size)
 {
 	mutex_lock(bus_mutex);
 #ifdef OVER_CAN
@@ -15,9 +17,13 @@ int transmit_data(uint8_t data, uint32_t size)
 	mutex_unlock(bus_mutex);
 }
 
+uint8_t NRZI_ENCODE(uint8_t data)
+{
+	return data;
+}
 
 
-int sent_over_uart(uint8_t *data, size_t size)
+int send_over_uart(uint8_t *data, size_t size)
 {
 	// Header
 	if (usart_transmit(0x7E)) {
