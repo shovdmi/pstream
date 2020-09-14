@@ -12,7 +12,7 @@ void tearDown(void)
 {
 }
 
-void test_pstreamer_NeedToImplement(void)
+void test_pstreamer_transmit_over_uart_on_no_errors(void)
 {
 
 	uint8_t test_data[] = { 0, 1, 2, 3, 4, 5, 6, 7};
@@ -33,6 +33,5 @@ void test_pstreamer_NeedToImplement(void)
 
 	int result = transmit_data(&test_data[0], sizeof(test_data));
 	TEST_ASSERT_EQUAL_INT(TRANSMIT_OK, result);
-
-	//TEST_IGNORE_MESSAGE("Need to Implement pstreamer");
 }
+
