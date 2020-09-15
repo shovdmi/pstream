@@ -93,7 +93,8 @@ int parse_0x7E(void)
 			break;
 		case SM_TAIL_EOF:
 			tsrb_commit();
-			send_msg(packet.bytes_received);
+			send_msg(packet.bytes_received - TAIL_SIZE - 1); // -1 because we received 0x7E and didn't increased bytes_received yet
+			sm_reset();
 			sm_state = sm_change_state(SM_IDLE);
 			break;
 

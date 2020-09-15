@@ -433,3 +433,164 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_tran
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 8);
        TEST_ASSERT_EQUAL_INT(sm_state, SM_TAIL_EOF);
 }
+
+//
+// Tests of SM_TAIL_EOF state
+//
+void test_Tail_EOF_state_receives_not_EOF(void)
+{
+       tsrb_reject_IgnoreAndReturn(0);
+       sm_reset();
+			 sm_state = SM_IDLE;
+       tsrb_reject_StopIgnore();
+
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
+
+       packet_sm(0x7E);
+
+       // feed state-machine at Header state
+       // 2 bytes of size
+       //
+       calc_crc16_ExpectAndReturn(0, 0, 0);
+       // feed state-machine
+       packet_sm(0x00);
+
+       calc_crc16_ExpectAndReturn(0, 0x09, 0);
+       sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
+       // 
+       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_PAYLOAD);
+
+
+
+       //
+       // feed state-machine at Payload state
+       //
+       calc_crc16_ExpectAndReturn(0, 0x11, 0);
+       tsrb_add_tmp_ExpectAndReturn(0x11, 0);
+       packet_sm(0x11);
+
+       calc_crc16_ExpectAndReturn(0, 0x22, 0);
+       tsrb_add_tmp_ExpectAndReturn(0x22, 0);
+       packet_sm(0x22);
+
+       calc_crc16_ExpectAndReturn(0, 0x33, 0);
+       tsrb_add_tmp_ExpectAndReturn(0x33, 0);
+       packet_sm(0x33);
+
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       tsrb_add_tmp_ExpectAndReturn(0x45, 0);
+       sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
+       packet_sm(0x45);
+
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_TAIL_CRC);
+
+       //
+       // feed state-machine at TAIL_CRC state
+       //
+       packet_sm(0x11);
+
+       sm_change_state_ExpectAndReturn(SM_TAIL_EOF, SM_TAIL_EOF);
+       packet_sm(0x22);
+
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 8);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_TAIL_EOF);
+
+       //
+       // feed state-machine at TAIL_EOF state
+       //
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_IDLE, SM_IDLE);
+
+       packet_sm(0x11);
+
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_IDLE);
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+}
+
+void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(void)
+{
+       tsrb_reject_IgnoreAndReturn(0);
+       sm_reset();
+			 sm_state = SM_IDLE;
+       tsrb_reject_StopIgnore();
+
+
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
+
+       packet_sm(0x7E);
+
+       // feed state-machine at Header state
+       // 2 bytes of size
+       //
+       calc_crc16_ExpectAndReturn(0, 0, 0);
+       // feed state-machine
+       packet_sm(0x00);
+
+       calc_crc16_ExpectAndReturn(0, 0x09, 0);
+       sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
+       // 
+       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_PAYLOAD);
+
+
+
+       //
+       // feed state-machine at Payload state
+       //
+       calc_crc16_ExpectAndReturn(0, 0x11, 0);
+       tsrb_add_tmp_ExpectAndReturn(0x11, 0);
+       packet_sm(0x11);
+
+       calc_crc16_ExpectAndReturn(0, 0x22, 0);
+       tsrb_add_tmp_ExpectAndReturn(0x22, 0);
+       packet_sm(0x22);
+
+       calc_crc16_ExpectAndReturn(0, 0x33, 0);
+       tsrb_add_tmp_ExpectAndReturn(0x33, 0);
+       packet_sm(0x33);
+
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       tsrb_add_tmp_ExpectAndReturn(0x45, 0);
+       sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
+       packet_sm(0x45);
+
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_TAIL_CRC);
+
+       //
+       // feed state-machine at TAIL_CRC state
+       // crc value is 0x1122 as was in the header
+       //
+       packet_sm(0x11);
+
+       sm_change_state_ExpectAndReturn(SM_TAIL_EOF, SM_TAIL_EOF);
+       packet_sm(0x22);
+
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 8);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_TAIL_EOF);
+
+       //
+       // feed state-machine at TAIL_EOF state
+       //
+       tsrb_commit_ExpectAndReturn(0);
+			 send_msg_ExpectAndReturn(4,0);
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_IDLE, SM_IDLE);
+
+       packet_sm(0x7E);
+
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_IDLE);
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+}
