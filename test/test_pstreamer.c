@@ -16,6 +16,9 @@ void tearDown(void)
 {
 }
 
+extern struct packet_t packet;
+extern enum sm_state_t sm_state;
+
 void test_pstreamer_transmit_over_uart_on_no_errors(void)
 {
 
@@ -64,7 +67,7 @@ void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
 }
 
 
-void test_pstreamer_usart_receiver_state_machine(void)
+void test_pstreamer_usart_receiver_state_machine_Header_state_SOF_Receiving(void)
 {
        tsrb_reject_ExpectAndReturn(0);
        sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
@@ -78,12 +81,42 @@ void test_pstreamer_usart_receiver_state_machine(void)
 
        // feed state-machine
        packet_sm(0x7E);
-       extern struct packet_t packet;
-       extern enum sm_state_t sm_state;
        TEST_ASSERT_EQUAL_INT(sm_state, SM_HEADER);
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
        TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+}
 
+void test_pstreamer_usart_receiver_state_machine_Header_state_receives_too_large_packet_size(void)
+{
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
+
+       packet_sm(0x7E);
+
+       //
+       // 2 bytes of size
+       //
+       calc_crc16_ExpectAndReturn(0, 0xFA, 0);
+       // feed state-machine
+       packet_sm(0xFA);
+
+       calc_crc16_ExpectAndReturn(0, 0xAB, 0);
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_IDLE, SM_IDLE);
+       // feed state-machine
+       packet_sm(0xAB);
+
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_IDLE);
+       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+}
+
+void test_pstreamer_usart_receiver_state_machine_Header_state_to_Payload_transition(void)
+{
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
+
+       packet_sm(0x7E);
 
        //
        // 2 bytes of size
@@ -100,6 +133,4 @@ void test_pstreamer_usart_receiver_state_machine(void)
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0004);
        TEST_ASSERT_EQUAL_INT(sm_state, SM_PAYLOAD);
-
-
 }
