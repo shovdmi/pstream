@@ -63,3 +63,12 @@ void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
        TEST_ASSERT_EQUAL_INT(OUT_OF_MEMORY, result);
 }
 
+
+void test_pstreamer_usart_receiver_state_machine(void)
+{
+       tsrb_reject_ExpectAndReturn(0);
+       sm_change_state_ExpectAndReturn(1, 1);
+
+       packet_sm(0x7E);
+
+}

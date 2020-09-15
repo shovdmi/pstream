@@ -7,5 +7,6 @@
 
 int transmit_data(uint8_t *data, size_t size);
 int send_over_uart(uint8_t *data, size_t size);
+int packet_sm(uint8_t data);
 
 #endif //PSTREAMER_H

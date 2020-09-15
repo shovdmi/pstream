@@ -7,6 +7,7 @@
 #include "message.h"
 #include "sm.h"
 #include "pstreamer.h"
+#include <string.h>
 
 #define USART_RECEIVED (1 << 0)
 
@@ -69,7 +70,6 @@ int send_over_uart(uint8_t *data, size_t size)
 
 enum sm_state_t {
 	SM_IDLE = 0,
-	SM_START,
 	SM_HEADER,
 	SM_PAYLOAD,
 	SM_TAIL_CRC,
@@ -105,12 +105,12 @@ int parse_0x7E(void)
 	{
 		case SM_IDLE:
 			sm_reset();
-			sm_state = SM_HEADER;
+			sm_state = sm_change_state(SM_HEADER);
 			break;
 		case SM_TAIL_EOF:
 			tsrb_commit();
 			send_msg(packet.bytes_received);
-			sm_state = SM_IDLE;
+			sm_state = sm_change_state(SM_IDLE);
 			break;
 
 		case SM_HEADER:
@@ -122,7 +122,7 @@ int parse_0x7E(void)
 		default:
 			// Frame error
 			sm_reset();
-			sm_state = SM_HEADER;
+			sm_state = sm_change_state(SM_HEADER);
 			break;
 	}
 
@@ -134,6 +134,7 @@ int packet_sm(uint8_t data)
 	if (data == 0x7E) {
 		// drop all data except 0x7E if we haven't received SOF or expecting EOF.
 		parse_0x7E();
+		return;
 	}
 	else {
 		packet.bytes_received++;
@@ -159,17 +160,17 @@ int packet_sm(uint8_t data)
 				if (packet.size > PACKET_MAX_SIZE) {
 					// Reset on error
 					sm_reset();
-					sm_state = SM_IDLE;
+					sm_state = sm_change_state(SM_IDLE);
 				}
 				else {
-					sm_state = SM_PAYLOAD;
+					sm_state = sm_change_state(SM_PAYLOAD);
 				}
 			}
 			break;
 		case SM_PAYLOAD:
 			tsrb_add_tmp(data);
 			if (packet.size - packet.bytes_received < TAIL_SIZE) {
-				sm_state = SM_TAIL_CRC;
+				sm_state = sm_change_state(SM_TAIL_CRC);
 			}
 			break;
 		case SM_TAIL_CRC:
@@ -177,19 +178,19 @@ int packet_sm(uint8_t data)
 			packet.fcs |= data;
 			if (packet.size - packet.bytes_received <= 1) {
 				if (packet.crc == packet.fcs) {
-					sm_state = SM_TAIL_EOF;
+					sm_state = sm_change_state(SM_TAIL_EOF);
 				}
 				else {
 					// CRC error
 					sm_reset();
-					sm_state = SM_IDLE;
+					sm_state = sm_change_state(SM_IDLE);
 				}
 			}
 			break;
 		case SM_TAIL_EOF:
 			// We must only get 0x7E if SM in this state, reset otherwise
 			sm_reset();
-			sm_state = SM_IDLE;
+			sm_state = sm_change_state(SM_IDLE);
 			break;
 
 		default:
