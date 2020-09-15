@@ -19,6 +19,10 @@ void tearDown(void)
 extern struct packet_t packet;
 extern enum sm_state_t sm_state;
 
+/*
+	Tests of wrapping data sending (over USART)
+*/
+
 void test_pstreamer_transmit_over_uart_on_no_errors(void)
 {
 
@@ -67,9 +71,12 @@ void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
 }
 
 /*
-	Tests of wrapping data sending (over USART)
+	Tests of wrapping data receiving (over USART)
 */
 
+//
+// Tests of SM_HEADER state
+//
 void test_pstreamer_usart_receiver_state_machine_Header_state_SOF_Receiving(void)
 {
        tsrb_reject_ExpectAndReturn(0);
@@ -139,6 +146,9 @@ void test_pstreamer_usart_receiver_state_machine_Header_state_to_Payload_transit
 }
 
 
+//
+// Tests of SM_PAYLOAD state
+//
 void test_pstreamer_usart_receiver_state_machine_Payload_state_receives_SOF(void)
 {
        tsrb_reject_ExpectAndReturn(0);
