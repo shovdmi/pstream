@@ -2,7 +2,24 @@
 #include "stdint.h"
 #include "usart.h"
 #include "mutex.h"
+#include "tsrb_ext.h"
+#include "crc.h"
+#include "message.h"
 #include "pstreamer.h"
+
+#define USART_RECEIVED (1 << 0)
+
+// 2 bytes packet.size
+#define HEADER_SIZE (2)
+// 2 bytes CRC + 1 byte EOF
+#define TAIL_SIZE (3)
+
+#ifdef OVER_CAN
+// 255 chunks * 7 bytes per chunk
+#  define PACKET_MAX_SIZE (255 * 7)
+#else
+#  define PACKET_MAX_SIZE (1024)
+#endif
 
 mutex_t bus_mutex;
 
@@ -48,107 +65,142 @@ int send_over_uart(uint8_t *data, size_t size)
 	return TRANSMIT_OK;
 }
 
-enum {
-	IDLE,
-	HEADER,
-	BODY,
-	CRC,
-	TAIL,
-} packet_state_t;
 
-packet_state_t packet_state = IDLE;
-size_t packet_size = 0;
-size_t bytes_received = 0;
-uint16_t packet_crc = 0;
-uint16_t header_crc = 0;
+enum sm_state_t {
+	SM_IDLE = 0,
+	SM_START,
+	SM_HEADER,
+	SM_PAYLOAD,
+	SM_TAIL_CRC,
+	SM_TAIL_EOF,
+}; 
 
-void sm_reset()
+struct packet_t {
+	size_t bytes_received;
+	size_t size;
+	uint16_t crc;
+	uint16_t fcs;
+};
+
+
+enum sm_state_t sm_state = SM_IDLE;
+struct packet_t packet;
+
+int sm_reset(void)
 {
-	packet_state = IDLE;
-	packet_size = 0;
-	bytes_received = 0;
-	packet_crc = 0;
-	header_crc = 0;
-	header_hcs = 0xAAAA; // dummy number to be different from header_crc initial value
-	packet_fcs = 0x5555; // dummy number to be different from packet_crc initial value
+	tsrb_reject();
+	memset(&packet, 0, sizeof(struct packet_t));
+	return 0; 
 }
 
-// "0x7E SZ1 SZ0 HCS1 HCS0 D1 D2 ... DN CS1 CS0 0x7E"
-
-int parse_header(size_t offset, uint8_t data)
+uint8_t  bit_stuff(uint8_t data)
 {
-	ASSERT(offset < HEADER_SIZE);
-
-	packet_size <<= 8;
-	packet_size |= data;
-	bytes_received++;
-	if (offset >= HEADER_SIZE) {
-		if (header_crc == header_hfc) {
-			packet_state = BODY;
-			if (packet_size - bytes_received < FCS_SIZE) {
-				packet_state = BODY;
-			}
-		}
-	}
-
-	// crc ok, header received complitely
-	return 0;
-
-	// await next header's byte
-	return 1;
-
-	// header crc error
-	return -1;
-
-	// frame size error
-	return -2;
+	return data;
 }
 
-void sm_process(uint8_t data)
+int parse_0x7E(void)
 {
-	if (data == 0x7E) {
-		if (packet_state == IDLE) {
-			packet_state = HEADER; 
-		}
-		else if (packet_state == TAIL) {
-			if (packet_fcs == packet_crc) {
-				tsrb_commit();
-				send_msg(packet_size);
-				sm_reset();
-			}
-		}
-		else {
+	switch (sm_state)
+	{
+		case SM_IDLE:
+			sm_reset();
+			sm_state = SM_HEADER;
+			break;
+		case SM_TAIL_EOF:
+			tsrb_commit();
+			send_msg(packet.bytes_received);
+			sm_state = SM_IDLE;
+			break;
+
+		case SM_HEADER:
+			__attribute__((fallthrough));
+		case SM_PAYLOAD:
+			__attribute__((fallthrough));
+		case SM_TAIL_CRC:
+			__attribute__((fallthrough));
+		default:
 			// Frame error
 			sm_reset();
-		}
-
-		return;
+			sm_state = SM_HEADER;
+			break;
 	}
 
-	// drop all data except 0x7E if we haven't received SOF.
-	if (packet_state == IDLE) {
-		sm_reset();
-		return;
+	return 0;
+}
+
+int packet_sm(uint8_t data)
+{
+	if (data == 0x7E) {
+		// drop all data except 0x7E if we haven't received SOF or expecting EOF.
+		parse_0x7E();
+	}
+	else {
+		packet.bytes_received++;
+		data = bit_stuff(data);
 	}
 
-	bytes_received++;
-	header_crc = crc16(header_crc, data);
-	packet_crc = crc16(packet_crc, data);
-	switch (packet_state)
+	if ((sm_state == SM_HEADER) || (sm_state == SM_PAYLOAD)) {
+		packet.crc = calc_crc16(packet.crc, data);
+	}
+
+
+	switch (sm_state)
 	{
-		case HEADER:
+		case SM_IDLE:
+			// reject all the data except 0x7E
 			break;
-		case BODY:
+		case SM_HEADER:
+			if (packet.bytes_received <= HEADER_SIZE) {
+				packet.size <<= 8;
+				packet.size |= data;
+			}
+			else {
+				if (packet.size > PACKET_MAX_SIZE) {
+					// Reset on error
+					sm_reset();
+					sm_state = SM_IDLE;
+				}
+				else {
+					sm_state = SM_PAYLOAD;
+				}
+			}
 			break;
+		case SM_PAYLOAD:
+			tsrb_add_tmp(data);
+			if (packet.size - packet.bytes_received < TAIL_SIZE) {
+				sm_state = SM_TAIL_CRC;
+			}
+			break;
+		case SM_TAIL_CRC:
+			packet.fcs <<=8;
+			packet.fcs |= data;
+			if (packet.size - packet.bytes_received <= 1) {
+				if (packet.crc == packet.fcs) {
+					sm_state = SM_TAIL_EOF;
+				}
+				else {
+					// CRC error
+					sm_reset();
+					sm_state = SM_IDLE;
+				}
+			}
+			break;
+		case SM_TAIL_EOF:
+			// We must only get 0x7E if SM in this state, reset otherwise
+			sm_reset();
+			sm_state = SM_IDLE;
+			break;
+
 		default:
 			break;
 	}
-
+	return 0;
 }
+
 
 void USART_Handler(void)
 {
-	if (usart_status(RECEIVED)) {
+	if (usart_status(USART_RECEIVED)) {
 		uint8_t data = usart_read();
 	}
 }
