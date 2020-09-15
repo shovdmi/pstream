@@ -97,9 +97,9 @@ void test_pstreamer_usart_receiver_state_machine(void)
        // feed state-machine
        packet_sm(0x04);
 
-       TEST_ASSERT_EQUAL_INT(sm_state, SM_PAYLOAD);
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0004);
+       TEST_ASSERT_EQUAL_INT(sm_state, SM_PAYLOAD);
 
 
 }

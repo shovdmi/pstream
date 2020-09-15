@@ -136,11 +136,9 @@ int packet_sm(uint8_t data)
 			// reject all the data except 0x7E
 			break;
 		case SM_HEADER:
-			if (packet.bytes_received <= HEADER_SIZE) {
-				packet.size <<= 8;
-				packet.size |= data;
-			}
-			else {
+			packet.size <<= 8;
+			packet.size |= data;
+			if (packet.bytes_received >= HEADER_SIZE) {
 				if (packet.size > PACKET_MAX_SIZE) {
 					// Reset on error
 					sm_reset();
