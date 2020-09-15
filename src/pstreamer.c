@@ -68,22 +68,6 @@ int send_over_uart(uint8_t *data, size_t size)
 }
 
 
-enum sm_state_t {
-	SM_IDLE = 0,
-	SM_HEADER,
-	SM_PAYLOAD,
-	SM_TAIL_CRC,
-	SM_TAIL_EOF,
-}; 
-
-struct packet_t {
-	size_t bytes_received;
-	size_t size;
-	uint16_t crc;
-	uint16_t fcs;
-};
-
-
 enum sm_state_t sm_state = SM_IDLE;
 struct packet_t packet;
 
@@ -134,7 +118,7 @@ int packet_sm(uint8_t data)
 	if (data == 0x7E) {
 		// drop all data except 0x7E if we haven't received SOF or expecting EOF.
 		parse_0x7E();
-		return;
+		return 0;
 	}
 	else {
 		packet.bytes_received++;
