@@ -2,6 +2,8 @@
 
 #include "mock_mutex.h"
 #include "mock_usart.h"
+#include "mock_tsrb_ext.h"
+#include "mock_crc.h"
 #include "pstreamer.h"
 
 void setUp(void)
