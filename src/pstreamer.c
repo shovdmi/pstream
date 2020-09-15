@@ -77,6 +77,8 @@ void sm_reset()
 
 int parse_header(size_t offset, uint8_t data)
 {
+	ASSERT(offset < HEADER_SIZE);
+
 	packet_size <<= 8;
 	packet_size |= data;
 	bytes_received++;
