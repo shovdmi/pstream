@@ -5,6 +5,7 @@
 #include "mock_tsrb_ext.h"
 #include "mock_crc.h"
 #include "mock_message.h"
+#include "mock_sm.h"
 #include "pstreamer.h"
 
 void setUp(void)

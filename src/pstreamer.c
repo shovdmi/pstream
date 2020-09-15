@@ -5,6 +5,7 @@
 #include "tsrb_ext.h"
 #include "crc.h"
 #include "message.h"
+#include "sm.h"
 #include "pstreamer.h"
 
 #define USART_RECEIVED (1 << 0)
@@ -202,5 +203,6 @@ void USART_Handler(void)
 {
 	if (usart_status(USART_RECEIVED)) {
 		uint8_t data = usart_read();
+		packet_sm(data);
 	}
 }
