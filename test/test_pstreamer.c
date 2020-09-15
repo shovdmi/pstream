@@ -66,6 +66,9 @@ void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
        TEST_ASSERT_EQUAL_INT(OUT_OF_MEMORY, result);
 }
 
+/*
+	Tests of wrapping data sending (over USART)
+*/
 
 void test_pstreamer_usart_receiver_state_machine_Header_state_SOF_Receiving(void)
 {
