@@ -75,7 +75,7 @@ int sm_reset(void)
 {
 	tsrb_reject();
 	memset(&packet, 0, sizeof(struct packet_t));
-	return 0; 
+	return 0;
 }
 
 uint8_t  bit_stuff(uint8_t data)

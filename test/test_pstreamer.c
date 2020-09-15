@@ -19,9 +19,11 @@ void tearDown(void)
 extern struct packet_t packet;
 extern enum sm_state_t sm_state;
 
-/*
-	Tests of wrapping data sending (over USART)
-*/
+/* -----------------------------------------------------------------------------
+ *
+ *          Tests of wrapping data sending (over USART)
+ *
+ * ---------------------------------------------------------------------------*/
 
 void test_pstreamer_transmit_over_uart_on_no_errors(void)
 {
@@ -70,9 +72,11 @@ void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
        TEST_ASSERT_EQUAL_INT(OUT_OF_MEMORY, result);
 }
 
-/*
-	Tests of wrapping data receiving (over USART)
-*/
+/* -----------------------------------------------------------------------------
+ *
+ *          Tests of wrapping data receiving (over USART)
+ *
+ * ---------------------------------------------------------------------------*/
 
 //
 // Tests of SM_HEADER state
@@ -166,7 +170,7 @@ void test_pstreamer_usart_receiver_state_machine_Payload_state_receives_SOF(void
        calc_crc16_ExpectAndReturn(0, 0x09, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // 
-       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+       packet_sm(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
@@ -215,7 +219,7 @@ void test_pstreamer_usart_receiver_state_machine_Payload_state_to_CRC_Tail_trans
        calc_crc16_ExpectAndReturn(0, 0x09, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // 
-       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+       packet_sm(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
@@ -267,7 +271,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_on_Wrong_CRC(voi
        calc_crc16_ExpectAndReturn(0, 0x09, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // 
-       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+       packet_sm(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
@@ -329,7 +333,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_receives_SOF(voi
        calc_crc16_ExpectAndReturn(0, 0x09, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // 
-       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+       packet_sm(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
@@ -391,7 +395,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_tran
        calc_crc16_ExpectAndReturn(0, 0x09, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // 
-       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+       packet_sm(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
@@ -459,7 +463,7 @@ void test_Tail_EOF_state_receives_not_EOF(void)
        calc_crc16_ExpectAndReturn(0, 0x09, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // 
-       packet_sm(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
+       packet_sm(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
        TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
        TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
@@ -518,7 +522,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(voi
 {
        tsrb_reject_IgnoreAndReturn(0);
        sm_reset();
-			 sm_state = SM_IDLE;
+       sm_state = SM_IDLE;
        tsrb_reject_StopIgnore();
 
 
@@ -584,7 +588,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(voi
        // feed state-machine at TAIL_EOF state
        //
        tsrb_commit_ExpectAndReturn(0);
-			 send_msg_ExpectAndReturn(4,0);
+       send_msg_ExpectAndReturn(4,0);
        tsrb_reject_ExpectAndReturn(0);
        sm_change_state_ExpectAndReturn(SM_IDLE, SM_IDLE);
 
