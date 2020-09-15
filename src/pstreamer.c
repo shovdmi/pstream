@@ -151,7 +151,7 @@ int packet_sm(uint8_t data)
 			break;
 		case SM_PAYLOAD:
 			tsrb_add_tmp(data);
-			if (packet.size - packet.bytes_received < TAIL_SIZE) {
+			if (packet.size - packet.bytes_received <= TAIL_SIZE) {
 				sm_state = sm_change_state(SM_TAIL_CRC);
 			}
 			break;
