@@ -76,6 +76,7 @@ void test_pstreamer_usart_receiver_state_machine(void)
        tsrb_reject_ExpectAndReturn(0);
        sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
 
+       // feed state-machine
        packet_sm(0x7E);
        extern struct packet_t packet;
        extern enum sm_state_t sm_state;
@@ -84,12 +85,16 @@ void test_pstreamer_usart_receiver_state_machine(void)
        TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
 
 
+       //
        // 2 bytes of size
+       //
        calc_crc16_ExpectAndReturn(0, 0, 0);
+       // feed state-machine
        packet_sm(0x00);
 
        calc_crc16_ExpectAndReturn(0, 0x04, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
+       // feed state-machine
        packet_sm(0x04);
 
        TEST_ASSERT_EQUAL_INT(sm_state, SM_PAYLOAD);
