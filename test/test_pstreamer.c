@@ -57,7 +57,7 @@ void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
        usart_transmit_ExpectAndReturn(0x7E, OUT_OF_MEMORY);
 
        mutex_unlock_ExpectAndReturn(0, 0);
-       
+
 
        int result = transmit_data(&test_data[0], sizeof(test_data));
        TEST_ASSERT_EQUAL_INT(OUT_OF_MEMORY, result);
