@@ -25,6 +25,16 @@ int send_data(uint8_t *data, size_t size)
 	return res;
 }
 
+void pstreamer_init(void)
+{
+	mutex_init(&bus_mutex);
+#ifdef OVER_CAN
+
+#else
+	parser_reset();
+#endif
+}
+
 void USART_Handler(void)
 {
 	if (usart_status(USART_RECEIVED)) {
