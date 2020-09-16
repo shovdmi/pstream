@@ -16,7 +16,7 @@ void tearDown(void)
 {
 }
 
-extern struct packet_t packet;
+extern struct parser_t parser;
 extern enum parser_state_t parser_state;
 
 /* -----------------------------------------------------------------------------
@@ -131,8 +131,8 @@ void test_pstreamer_usart_receiver_state_machine_Header_state_SOF_Receiving(void
        // feed state-machine
        parser_feed(0x7E);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_HEADER);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }
 
 void test_pstreamer_usart_receiver_state_machine_Header_state_receives_too_large_packet_size(void)
@@ -156,8 +156,8 @@ void test_pstreamer_usart_receiver_state_machine_Header_state_receives_too_large
        parser_feed(0xAB);
 
        TEST_ASSERT_EQUAL_INT(parser_state, SM_IDLE);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }
 
 void test_pstreamer_usart_receiver_state_machine_Header_state_to_Payload_transition(void)
@@ -179,8 +179,8 @@ void test_pstreamer_usart_receiver_state_machine_Header_state_to_Payload_transit
        // feed state-machine
        parser_feed(0x04);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0004);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0004);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 }
 
@@ -207,8 +207,8 @@ void test_pstreamer_usart_receiver_state_machine_Payload_state_receives_SOF(void
        // 
        parser_feed(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -233,8 +233,8 @@ void test_pstreamer_usart_receiver_state_machine_Payload_state_receives_SOF(void
        sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
        parser_feed(0x7E);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_HEADER);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }
 
 void test_pstreamer_usart_receiver_state_machine_Payload_state_to_CRC_Tail_transition(void)
@@ -256,8 +256,8 @@ void test_pstreamer_usart_receiver_state_machine_Payload_state_to_CRC_Tail_trans
        // 
        parser_feed(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -282,7 +282,7 @@ void test_pstreamer_usart_receiver_state_machine_Payload_state_to_CRC_Tail_trans
        sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
        parser_feed(0x45);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 6);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_CRC);
 }
 
@@ -308,8 +308,8 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_on_Wrong_CRC(voi
        // 
        parser_feed(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -329,12 +329,12 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_on_Wrong_CRC(voi
        tsrb_add_tmp_ExpectAndReturn(0x33, 0);
        parser_feed(0x33);
 
-       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set parser.crc to 0x1122
        tsrb_add_tmp_ExpectAndReturn(0x45, 0);
        sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
        parser_feed(0x45);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 6);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_CRC);
 
        //
@@ -347,8 +347,8 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_on_Wrong_CRC(voi
        parser_feed(0xCD);
 
        TEST_ASSERT_EQUAL_INT(parser_state, SM_IDLE);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }
 
 void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_receives_SOF(void)
@@ -370,8 +370,8 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_receives_SOF(voi
        // 
        parser_feed(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -391,12 +391,12 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_receives_SOF(voi
        tsrb_add_tmp_ExpectAndReturn(0x33, 0);
        parser_feed(0x33);
 
-       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set parser.crc to 0x1122
        tsrb_add_tmp_ExpectAndReturn(0x45, 0);
        sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
        parser_feed(0x45);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 6);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_CRC);
 
        //
@@ -409,8 +409,8 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_receives_SOF(voi
        parser_feed(0x7E);
 
        TEST_ASSERT_EQUAL_INT(parser_state, SM_HEADER);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }
 
 void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_transition(void)
@@ -432,8 +432,8 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_tran
        // 
        parser_feed(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -453,12 +453,12 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_tran
        tsrb_add_tmp_ExpectAndReturn(0x33, 0);
        parser_feed(0x33);
 
-       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set parser.crc to 0x1122
        tsrb_add_tmp_ExpectAndReturn(0x45, 0);
        sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
        parser_feed(0x45);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 6);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_CRC);
 
        //
@@ -469,7 +469,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_tran
        sm_change_state_ExpectAndReturn(SM_TAIL_EOF, SM_TAIL_EOF);
        parser_feed(0x22);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 8);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 8);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_EOF);
 }
 
@@ -500,8 +500,8 @@ void test_Tail_EOF_state_receives_not_EOF(void)
        // 
        parser_feed(0x09); // [header:2bytes] + [payload:4 bytes]  + [CRC:2 bytes] + [EOF:1 byte]
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -521,12 +521,12 @@ void test_Tail_EOF_state_receives_not_EOF(void)
        tsrb_add_tmp_ExpectAndReturn(0x33, 0);
        parser_feed(0x33);
 
-       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set parser.crc to 0x1122
        tsrb_add_tmp_ExpectAndReturn(0x45, 0);
        sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
        parser_feed(0x45);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 6);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_CRC);
 
        //
@@ -537,7 +537,7 @@ void test_Tail_EOF_state_receives_not_EOF(void)
        sm_change_state_ExpectAndReturn(SM_TAIL_EOF, SM_TAIL_EOF);
        parser_feed(0x22);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 8);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 8);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_EOF);
 
        //
@@ -549,8 +549,8 @@ void test_Tail_EOF_state_receives_not_EOF(void)
        parser_feed(0x11);
 
        TEST_ASSERT_EQUAL_INT(parser_state, SM_IDLE);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }
 
 void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(void)
@@ -578,8 +578,8 @@ void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(voi
        // 
        parser_feed(0x09); // header: 2bytes + payload: 4 bytes  + CRC: 2 bytes + EOF: 1 byte
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(packet.size, 0x0009);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 
 
@@ -599,12 +599,12 @@ void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(voi
        tsrb_add_tmp_ExpectAndReturn(0x33, 0);
        parser_feed(0x33);
 
-       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set packet.crc to 0x1122
+       calc_crc16_ExpectAndReturn(0, 0x45, 0x1122); // Here we set parser.crc to 0x1122
        tsrb_add_tmp_ExpectAndReturn(0x45, 0);
        sm_change_state_ExpectAndReturn(SM_TAIL_CRC, SM_TAIL_CRC);
        parser_feed(0x45);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 6);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 6);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_CRC);
 
        //
@@ -616,7 +616,7 @@ void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(voi
        sm_change_state_ExpectAndReturn(SM_TAIL_EOF, SM_TAIL_EOF);
        parser_feed(0x22);
 
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 8);
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 8);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_TAIL_EOF);
 
        //
@@ -630,6 +630,6 @@ void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(voi
        parser_feed(0x7E);
 
        TEST_ASSERT_EQUAL_INT(parser_state, SM_IDLE);
-       TEST_ASSERT_EQUAL_INT(packet.bytes_received, 0);
-       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&packet, sizeof(struct packet_t));
+       TEST_ASSERT_EQUAL_INT(parser.bytes_received, 0);
+       TEST_ASSERT_EACH_EQUAL_INT32(0, (uint8_t*)&parser, sizeof(struct parser_t));
 }

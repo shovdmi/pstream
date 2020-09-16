@@ -10,7 +10,7 @@
 
 #define USART_RECEIVED (1 << 0)
 
-// 2 bytes packet.size
+// 2 bytes parser.packet_size
 #define HEADER_SIZE (2)
 // 2 bytes CRC + 1 byte EOF
 #define TAIL_SIZE (3)
@@ -109,12 +109,12 @@ int send_over_uart(uint8_t *data, size_t size)
 
 
 enum parser_state_t parser_state = SM_IDLE;
-struct packet_t packet;
+struct parser_t parser;
 
 int parser_reset(void)
 {
 	tsrb_reject();
-	memset(&packet, 0, sizeof(struct packet_t));
+	memset(&parser, 0, sizeof(struct parser_t));
 	return 0;
 }
 
@@ -128,7 +128,7 @@ int parse_0x7E(void)
 			break;
 		case SM_TAIL_EOF:
 			tsrb_commit();
-			send_msg(packet.bytes_received - TAIL_SIZE - 1); // -1 because we received 0x7E and didn't increased bytes_received yet
+			send_msg(parser.bytes_received - TAIL_SIZE - 1); // -1 because we received 0x7E and didn't increased bytes_received yet
 			parser_reset();
 			parser_state = sm_change_state(SM_IDLE);
 			break;
@@ -157,13 +157,13 @@ int parser_feed(uint8_t data)
 		return 0;
 	}
 	else {
-		packet.bytes_received++;
-		data = zero_bit_delete(packet.prev_data, data);
-		packet.prev_data = data;
+		parser.bytes_received++;
+		data = zero_bit_delete(parser.prev_data, data);
+		parser.prev_data = data;
 	}
 
 	if ((parser_state == SM_HEADER) || (parser_state == SM_PAYLOAD)) {
-		packet.crc = calc_crc16(packet.crc, data);
+		parser.crc = calc_crc16(parser.crc, data);
 	}
 
 
@@ -173,10 +173,10 @@ int parser_feed(uint8_t data)
 			// reject all the data except 0x7E
 			break;
 		case SM_HEADER:
-			packet.size <<= 8;
-			packet.size |= data;
-			if (packet.bytes_received >= HEADER_SIZE) {
-				if (packet.size > PACKET_MAX_SIZE) {
+			parser.packet_size <<= 8;
+			parser.packet_size |= data;
+			if (parser.bytes_received >= HEADER_SIZE) {
+				if (parser.packet_size > PACKET_MAX_SIZE) {
 					// Reset on error
 					parser_reset();
 					parser_state = sm_change_state(SM_IDLE);
@@ -188,15 +188,15 @@ int parser_feed(uint8_t data)
 			break;
 		case SM_PAYLOAD:
 			tsrb_add_tmp(data);
-			if (packet.size - packet.bytes_received <= TAIL_SIZE) {
+			if (parser.packet_size - parser.bytes_received <= TAIL_SIZE) {
 				parser_state = sm_change_state(SM_TAIL_CRC);
 			}
 			break;
 		case SM_TAIL_CRC:
-			packet.fcs <<=8;
-			packet.fcs |= data;
-			if (packet.size - packet.bytes_received <= 1) {
-				if (packet.crc == packet.fcs) {
+			parser.fcs <<=8;
+			parser.fcs |= data;
+			if (parser.packet_size - parser.bytes_received <= 1) {
+				if (parser.crc == parser.fcs) {
 					parser_state = sm_change_state(SM_TAIL_EOF);
 				}
 				else {

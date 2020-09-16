@@ -13,9 +13,9 @@ enum parser_state_t {
 	SM_TAIL_EOF,
 }; 
 
-struct packet_t {
+struct parser_t {
 	size_t bytes_received;
-	size_t size;
+	size_t packet_size;
 	uint16_t crc;
 	uint16_t fcs;
 	uint8_t prev_data;
