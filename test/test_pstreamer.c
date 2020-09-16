@@ -10,16 +10,20 @@
 #include "pstreamer_usart.h"
 
 
+extern struct parser_t parser;
+extern enum parser_state_t parser_state;
+
 void setUp(void)
 {
+	tsrb_reject_IgnoreAndReturn(0);
+	parser_reset();
+	parser_state = SM_IDLE;
+	tsrb_reject_StopIgnore();
 }
 
 void tearDown(void)
 {
 }
-
-extern struct parser_t parser;
-extern enum parser_state_t parser_state;
 
 /* -----------------------------------------------------------------------------
  *
@@ -38,11 +42,11 @@ void test_pstreamer_send_over_uart_on_no_errors(void)
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
 
 	// Transmit Header (size of packet) : 2 bytes to be transmitted
-	uint8_t val = sizeof(test_data) & 0xFF;
+	uint8_t val = (sizeof(test_data) + 5) & 0xFF;
 	calc_crc16_ExpectAndReturn(0, val, 0);
 	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
 
-	val = (sizeof(test_data) >> 8) & 0xFF;
+	val = ((sizeof(test_data) + 5) >> 8) & 0xFF;
 	calc_crc16_ExpectAndReturn(0, val, 0);
 	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
 
@@ -78,11 +82,11 @@ void test_pstreamer_send_over_uart_if_Out_Of_Memory_error_happend(void)
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
 
 	// Transmit Header (size of packet) : 2 bytes to be transmitted
-	uint8_t val = sizeof(test_data) & 0xFF;
+	uint8_t val = (sizeof(test_data) + 5) & 0xFF;
 	calc_crc16_ExpectAndReturn(0, val, 0);
 	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
 
-	val = (sizeof(test_data) >> 8) & 0xFF;
+	val = ((sizeof(test_data) + 5) >> 8) & 0xFF;
 	calc_crc16_ExpectAndReturn(0, val, 0);
 	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
 
@@ -176,13 +180,13 @@ void test_pstreamer_usart_receiver_state_machine_Header_state_to_Payload_transit
        // feed state-machine
        parser_feed(0x00);
 
-       calc_crc16_ExpectAndReturn(0, 0x04, 0);
+       calc_crc16_ExpectAndReturn(0, 9, 0);
        sm_change_state_ExpectAndReturn(SM_PAYLOAD, SM_PAYLOAD);
        // feed state-machine
-       parser_feed(0x04);
+       parser_feed(9);
 
        TEST_ASSERT_EQUAL_INT(parser.bytes_received, 2);
-       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0004);
+       TEST_ASSERT_EQUAL_INT(parser.packet_size, 0x0009);
        TEST_ASSERT_EQUAL_INT(parser_state, SM_PAYLOAD);
 }
 
@@ -480,11 +484,6 @@ void test_pstreamer_usart_receiver_state_machine_Tail_CRC_state_to_Tail_EOF_tran
 //
 void test_Tail_EOF_state_receives_not_EOF(void)
 {
-       tsrb_reject_IgnoreAndReturn(0);
-       parser_reset();
-			 parser_state = SM_IDLE;
-       tsrb_reject_StopIgnore();
-
        tsrb_reject_ExpectAndReturn(0);
        sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
 
@@ -557,12 +556,6 @@ void test_Tail_EOF_state_receives_not_EOF(void)
 
 void test_pstreamer_usart_receiver_state_machine_Tail_EOF_state_receives_EOF(void)
 {
-       tsrb_reject_IgnoreAndReturn(0);
-       parser_reset();
-       parser_state = SM_IDLE;
-       tsrb_reject_StopIgnore();
-
-
        tsrb_reject_ExpectAndReturn(0);
        sm_change_state_ExpectAndReturn(SM_HEADER, SM_HEADER);
 

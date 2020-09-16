@@ -40,7 +40,8 @@ int send_over_uart(uint8_t *data, size_t size)
 	uint8_t prev_zbi = 0;
 
 	// Header: size of the header and payload
-	uint16_t header = size;
+	// 5 = [header:2bytes] + ... + [CRC:2 bytes] + [EOF:1 byte]
+	uint16_t header = size + 5;
 	for (size_t i = 0; i < sizeof(header); i++)
 	{
 		crc16 = calc_crc16(crc16, (header & 0xFF));
@@ -152,7 +153,8 @@ int parser_feed(uint8_t data)
 			parser.packet_size <<= 8;
 			parser.packet_size |= data;
 			if (parser.bytes_received >= HEADER_SIZE) {
-				if (parser.packet_size > PACKET_MAX_SIZE) {
+				// 5 = [header:2bytes] + ... + [CRC:2 bytes] + [EOF:1 byte]
+				if ((parser.packet_size < 5) || (parser.packet_size > PACKET_MAX_SIZE)) {
 					// Reset on error
 					parser_reset();
 					parser_state = sm_change_state(SM_IDLE);
