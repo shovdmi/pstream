@@ -15,13 +15,13 @@ STATIC mutex_t bus_mutex;
 int send_data(uint8_t *data, size_t size)
 {
 	int res = 0;
-	mutex_lock(bus_mutex);
+	mutex_lock(&bus_mutex);
 #ifdef OVER_CAN
 	res = send_over_can(data, size);
 #else
 	res = send_over_uart(data, size);
 #endif
-	mutex_unlock(bus_mutex);
+	mutex_unlock(&bus_mutex);
 	return res;
 }
 

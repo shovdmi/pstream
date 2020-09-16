@@ -32,7 +32,7 @@ void test_pstreamer_send_over_uart_on_no_errors(void)
 
 	uint8_t test_data[] = { 0, 1, 2, 3, 4, 5, 6, 7};
 
-	mutex_lock_ExpectAndReturn(0, 0);
+	mutex_lock_ExpectAnyArgsAndReturn(0);
 
 	// Transmit SOF
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
@@ -60,7 +60,7 @@ void test_pstreamer_send_over_uart_on_no_errors(void)
 	// Transmit EOF
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
 
-	mutex_unlock_ExpectAndReturn(0, 0);
+	mutex_unlock_ExpectAnyArgsAndReturn(0);
 	
 
 	int result = send_data(&test_data[0], sizeof(test_data));
@@ -72,7 +72,7 @@ void test_pstreamer_send_over_uart_if_Out_Of_Memory_error_happend(void)
 
 	uint8_t test_data[16];
 
-	mutex_lock_ExpectAndReturn(0, 0);
+	mutex_lock_ExpectAnyArgsAndReturn(0);
 
 	// Transmit SOF
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
@@ -102,7 +102,7 @@ void test_pstreamer_send_over_uart_if_Out_Of_Memory_error_happend(void)
 	// Transmit EOF
 	usart_transmit_ExpectAndReturn(0x7E, OUT_OF_MEMORY);
 
-	mutex_unlock_ExpectAndReturn(0, 0);
+	mutex_unlock_ExpectAnyArgsAndReturn(0);
 
 
 	int result = send_data(&test_data[0], sizeof(test_data));
