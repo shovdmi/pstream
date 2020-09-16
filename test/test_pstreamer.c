@@ -7,6 +7,8 @@
 #include "mock_message.h"
 #include "mock_sm.h"
 #include "pstreamer.h"
+#include "pstreamer_usart.h"
+
 
 void setUp(void)
 {
