@@ -5,6 +5,12 @@
 #define OUT_OF_MEMORY    (-2)
 #define CONNECTION_ERROR (-3)
 
+#ifdef TEST
+#define STATIC
+#else
+#define STATIC static
+#endif
+
 enum parser_state_t {
 	SM_IDLE = 0,
 	SM_HEADER,

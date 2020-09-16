@@ -22,7 +22,10 @@
 #  define PACKET_MAX_SIZE (1024)
 #endif
 
-mutex_t bus_mutex;
+STATIC mutex_t bus_mutex;
+STATIC enum parser_state_t parser_state = SM_IDLE;
+STATIC struct parser_t parser;
+
 
 int send_data(uint8_t *data, size_t size)
 {
@@ -37,14 +40,14 @@ int send_data(uint8_t *data, size_t size)
 	return res;
 }
 
-uint8_t zero_bit_insert(uint8_t prev_data, uint8_t data)
+STATIC uint8_t zero_bit_insert(uint8_t prev_data, uint8_t data)
 {
 	// TODO
 	(void)prev_data;
 	return data;
 }
 
-uint8_t zero_bit_delete(uint8_t prev_data, uint8_t data)
+STATIC uint8_t zero_bit_delete(uint8_t prev_data, uint8_t data)
 {
 	// TODO
 	(void)prev_data;
@@ -108,9 +111,6 @@ int send_over_uart(uint8_t *data, size_t size)
 }
 
 
-enum parser_state_t parser_state = SM_IDLE;
-struct parser_t parser;
-
 int parser_reset(void)
 {
 	tsrb_reject();
@@ -118,7 +118,7 @@ int parser_reset(void)
 	return 0;
 }
 
-int parse_0x7E(void)
+STATIC int parse_0x7E(void)
 {
 	switch (parser_state)
 	{
