@@ -24,7 +24,7 @@
 
 mutex_t bus_mutex;
 
-int transmit_data(uint8_t *data, size_t size)
+int send_data(uint8_t *data, size_t size)
 {
 	int res = 0;
 	mutex_lock(bus_mutex);
@@ -54,22 +54,52 @@ uint8_t zero_bit_delete(uint8_t prev_data, uint8_t data)
 
 int send_over_uart(uint8_t *data, size_t size)
 {
-	// Header
+	// Start-of-Frame (SOF)
 	if (usart_transmit(0x7E) != 0) {
 		return OUT_OF_MEMORY;
 	}
 	
+	uint16_t crc16 = 0;
+	uint8_t zbi = 0;
 	uint8_t prev_zbi = 0;
+
+	// Header: size of the header and payload
+	uint16_t header = size;
+	for (size_t i = 0; i < sizeof(header); i++)
+	{
+		crc16 = calc_crc16(crc16, (header & 0xFF));
+		zbi = zero_bit_insert(prev_zbi, (header & 0xFF));
+		prev_zbi = zbi;
+		if (usart_transmit(zbi) != 0) {
+			return OUT_OF_MEMORY;
+		}
+		header >>= 8;
+	}
+
+	// Payload
 	for (size_t i = 0; i < size; i++)
 	{
-		uint8_t zbi = zero_bit_insert(prev_zbi, data[i]);
+		crc16 = calc_crc16(crc16, data[i]);
+		zbi = zero_bit_insert(prev_zbi, data[i]);
 		prev_zbi = zbi;
 		if (usart_transmit(zbi) != 0) {
 			return OUT_OF_MEMORY;
 		}
 	} 
 
-	// Tail
+	// Tail: CRC16 of the header and payload
+	uint16_t tail = crc16;
+	for (size_t i = 0; i < sizeof(tail); i++)
+	{
+		zbi = zero_bit_insert(prev_zbi, (tail & 0xFF));
+		prev_zbi = zbi;
+		tail >>= 8;
+		if (usart_transmit(zbi) != 0) {
+			return OUT_OF_MEMORY;
+		}
+	}
+
+	// End-of-Frame (EOF)
 	if (usart_transmit(0x7E) != 0) {
 		return OUT_OF_MEMORY;
 	}

@@ -25,51 +25,86 @@ extern enum sm_state_t sm_state;
  *
  * ---------------------------------------------------------------------------*/
 
-void test_pstreamer_transmit_over_uart_on_no_errors(void)
+void test_pstreamer_send_over_uart_on_no_errors(void)
 {
 
 	uint8_t test_data[] = { 0, 1, 2, 3, 4, 5, 6, 7};
 
 	mutex_lock_ExpectAndReturn(0, 0);
 
+	// Transmit SOF
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
 
+	// Transmit Header (size of packet) : 2 bytes to be transmitted
+	uint8_t val = sizeof(test_data) & 0xFF;
+	calc_crc16_ExpectAndReturn(0, val, 0);
+	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
+
+	val = (sizeof(test_data) >> 8) & 0xFF;
+	calc_crc16_ExpectAndReturn(0, val, 0);
+	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
+
+	// Transit Payload
 	for (int i = 0; i < sizeof(test_data) ;i++)
 	{
+		calc_crc16_ExpectAndReturn(0, test_data[i], 0);
 		usart_transmit_ExpectAndReturn(test_data[i], TRANSMIT_OK);
 	}
 
+	// Transmit Tail (crc of packet) : 2 bytes to be transmitted
+	usart_transmit_ExpectAndReturn(0, TRANSMIT_OK);
+	usart_transmit_ExpectAndReturn(0, TRANSMIT_OK);
+
+	// Transmit EOF
 	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
 
 	mutex_unlock_ExpectAndReturn(0, 0);
 	
 
-	int result = transmit_data(&test_data[0], sizeof(test_data));
+	int result = send_data(&test_data[0], sizeof(test_data));
 	TEST_ASSERT_EQUAL_INT(TRANSMIT_OK, result);
 }
 
-void test_pstreamer_transmit_over_uart_if_Out_Of_Memory_error_happend(void)
+void test_pstreamer_send_over_uart_if_Out_Of_Memory_error_happend(void)
 {
 
-       uint8_t test_data[16];
+	uint8_t test_data[16];
 
-       mutex_lock_ExpectAndReturn(0, 0);
+	mutex_lock_ExpectAndReturn(0, 0);
 
-       usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
+	// Transmit SOF
+	usart_transmit_ExpectAndReturn(0x7E, TRANSMIT_OK);
 
-       for (int i = 0; i < sizeof(test_data) ;i++)
-       {
-               test_data[i] = i;
-               usart_transmit_ExpectAndReturn(test_data[i], TRANSMIT_OK);
-       }
+	// Transmit Header (size of packet) : 2 bytes to be transmitted
+	uint8_t val = sizeof(test_data) & 0xFF;
+	calc_crc16_ExpectAndReturn(0, val, 0);
+	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
 
-       usart_transmit_ExpectAndReturn(0x7E, OUT_OF_MEMORY);
+	val = (sizeof(test_data) >> 8) & 0xFF;
+	calc_crc16_ExpectAndReturn(0, val, 0);
+	usart_transmit_ExpectAndReturn(val, TRANSMIT_OK);
 
-       mutex_unlock_ExpectAndReturn(0, 0);
+
+	// Transit Payload
+	for (int i = 0; i < sizeof(test_data) ;i++)
+	{
+		test_data[i] = i;
+		calc_crc16_ExpectAndReturn(0, test_data[i], 0);
+		usart_transmit_ExpectAndReturn(test_data[i], TRANSMIT_OK);
+	}
+
+	// Transmit Tail (crc of packet) : 2 bytes to be transmitted
+	usart_transmit_ExpectAndReturn(0, TRANSMIT_OK);
+	usart_transmit_ExpectAndReturn(0, TRANSMIT_OK);
+
+	// Transmit EOF
+	usart_transmit_ExpectAndReturn(0x7E, OUT_OF_MEMORY);
+
+	mutex_unlock_ExpectAndReturn(0, 0);
 
 
-       int result = transmit_data(&test_data[0], sizeof(test_data));
-       TEST_ASSERT_EQUAL_INT(OUT_OF_MEMORY, result);
+	int result = send_data(&test_data[0], sizeof(test_data));
+	TEST_ASSERT_EQUAL_INT(OUT_OF_MEMORY, result);
 }
 
 /* -----------------------------------------------------------------------------
