@@ -18,6 +18,7 @@ struct packet_t {
 	size_t size;
 	uint16_t crc;
 	uint16_t fcs;
+	uint8_t prev_data;
 };
 
 

@@ -37,8 +37,17 @@ int transmit_data(uint8_t *data, size_t size)
 	return res;
 }
 
-uint8_t NRZI_ENCODE(uint8_t data)
+uint8_t zero_bit_insert(uint8_t prev_data, uint8_t data)
 {
+	// TODO
+	(void)prev_data;
+	return data;
+}
+
+uint8_t zero_bit_delete(uint8_t prev_data, uint8_t data)
+{
+	// TODO
+	(void)prev_data;
 	return data;
 }
 
@@ -50,10 +59,12 @@ int send_over_uart(uint8_t *data, size_t size)
 		return OUT_OF_MEMORY;
 	}
 	
-	for (size_t i = 0; i<size; i++)
+	uint8_t prev_zbi = 0;
+	for (size_t i = 0; i < size; i++)
 	{
-		uint8_t nrzi_data = NRZI_ENCODE(data[i]);
-		if (usart_transmit(nrzi_data) != 0) {
+		uint8_t zbi = zero_bit_insert(prev_zbi, data[i]);
+		prev_zbi = zbi;
+		if (usart_transmit(zbi) != 0) {
 			return OUT_OF_MEMORY;
 		}
 	} 
@@ -122,7 +133,8 @@ int packet_sm(uint8_t data)
 	}
 	else {
 		packet.bytes_received++;
-		data = bit_stuff(data);
+		data = zero_bit_delete(packet.prev_data, data);
+		packet.prev_data = data;
 	}
 
 	if ((sm_state == SM_HEADER) || (sm_state == SM_PAYLOAD)) {
