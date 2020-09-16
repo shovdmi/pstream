@@ -1,5 +1,5 @@
-#include "unity.h"
-#include "stdint.h"
+#include <stdint.h>
+#include <string.h>
 #include "usart.h"
 #include "mutex.h"
 #include "tsrb_ext.h"
@@ -7,7 +7,6 @@
 #include "message.h"
 #include "sm.h"
 #include "pstreamer.h"
-#include <string.h>
 
 #define USART_RECEIVED (1 << 0)
 
