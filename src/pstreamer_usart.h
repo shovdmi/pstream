@@ -4,9 +4,9 @@
 #define USART_RECEIVED (1 << 0)
 
 // 2 bytes parser.packet_size
-#define HEADER_SIZE (2)
+#define PSTREAM_USART_HEADER_SIZE (2)
 // 2 bytes CRC + 1 byte EOF
-#define TAIL_SIZE (3)
+#define PSTREAM_USART_TAIL_SIZE (3)
 
 
 enum parser_state_t {

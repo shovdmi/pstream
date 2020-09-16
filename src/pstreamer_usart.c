@@ -105,7 +105,7 @@ STATIC int parse_0x7E(void)
 			break;
 		case SM_TAIL_EOF:
 			tsrb_commit();
-			send_msg(parser.bytes_received - TAIL_SIZE - 1); // -1 because we received 0x7E and didn't increased bytes_received yet
+			send_msg(parser.bytes_received - PSTREAM_USART_TAIL_SIZE - 1); // -1 because we received 0x7E and didn't increased bytes_received yet
 			parser_reset();
 			parser_state = sm_change_state(SM_IDLE);
 			break;
@@ -152,7 +152,7 @@ int parser_feed(uint8_t data)
 		case SM_HEADER:
 			parser.packet_size <<= 8;
 			parser.packet_size |= data;
-			if (parser.bytes_received >= HEADER_SIZE) {
+			if (parser.bytes_received >= PSTREAM_USART_HEADER_SIZE) {
 				// 5 = [header:2bytes] + ... + [CRC:2 bytes] + [EOF:1 byte]
 				if ((parser.packet_size < 5) || (parser.packet_size > PACKET_MAX_SIZE)) {
 					// Reset on error
@@ -166,7 +166,7 @@ int parser_feed(uint8_t data)
 			break;
 		case SM_PAYLOAD:
 			tsrb_add_tmp(data);
-			if (parser.packet_size - parser.bytes_received <= TAIL_SIZE) {
+			if (parser.packet_size - parser.bytes_received <= PSTREAM_USART_TAIL_SIZE) {
 				parser_state = sm_change_state(SM_TAIL_CRC);
 			}
 			break;
