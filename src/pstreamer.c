@@ -8,6 +8,7 @@
 #include "sm.h"
 #include "pstreamer.h"
 #include "pstreamer_usart.h"
+#include "pstreamer_can.h"
 
 
 STATIC mutex_t bus_mutex;
@@ -16,7 +17,7 @@ int send_data(uint8_t *data, size_t size)
 {
 	int res = 0;
 	mutex_lock(&bus_mutex);
-#ifdef OVER_CAN
+#ifdef PSTREAMER_OVER_CAN
 	res = send_over_can(data, size);
 #else
 	res = send_over_uart(data, size);
@@ -28,7 +29,7 @@ int send_data(uint8_t *data, size_t size)
 void pstreamer_init(void)
 {
 	mutex_init(&bus_mutex);
-#ifdef OVER_CAN
+#ifdef PSTREAMER_OVER_CAN
 
 #else
 	parser_reset();

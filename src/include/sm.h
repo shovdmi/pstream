@@ -3,4 +3,4 @@
 
 int sm_change_state(int new_state);
 
-#endif // SM_HEOUAOEAA
+#endif // SM_H

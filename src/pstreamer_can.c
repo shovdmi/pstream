@@ -7,14 +7,25 @@
 #include "message.h"
 #include "sm.h"
 #include "pstreamer.h"
-#include "pstreamer_usart.h"
+#include "pstreamer_can.h"
 
 #define CEILING(x,y) ((x) + (y) - 1) / (y)
 
+STATIC struct BAM_sm_t bam_sm;
+
+STATIC uint32_t time_now()
+{
+	return 0;
+}
+
+/* -----------------------------------------------------------------------------
+ *              Transmitting
+ *
+ * -------------------------------------------------------------------------- */
 int send_over_can(uint8_t *data, size_t size)
 {
 	if (size <= 7) {
-		return transmit_p2p_package(data, size);
+		return transmit_P2P_package(data, size);
 	}
 	
 	size_t packages_total = CEILING(size, 7);
@@ -36,33 +47,28 @@ int send_over_can(uint8_t *data, size_t size)
 	}
 }
 
-enum BAM_state_t {
-	IDLE = 0,
-	RECEIVING,
-};
+/* -----------------------------------------------------------------------------
+ *              Receiving State-machine
+ *
+ * -------------------------------------------------------------------------- */
 
-struct BAM_sm_t {
-	size_t bytes;
-	size_t size;
-	size_t packages;
-	size_t packages_received;
-	uint32_t timestamp;
 
-	enum BAM_state_t state;
-} bam_sm;
-
-int bam_sm_reset(BAM_sm_t *bam_sm)
+int bam_sm_reset(struct BAM_sm_t *bam_sm)
 {
 	tsrb_reject();
-	memset(bam_sm, 0, sizeof(struct bam_sm_t));
+	memset(bam_sm, 0, sizeof(struct BAM_sm_t));
 }
 
-int bam_start(BAM_sm_t *bam_sm, uint8_t data[8])
+STATIC int bam_start(struct BAM_sm_t *bam_sm, uint8_t data[8])
 {
 	bam_sm_reset(bam_sm);
 
 	size_t bytes = data[1] + (data[2] << 8);
 	size_t packages =  data[3];
+
+	if (bytes > PACKET_MAX_SIZE) {
+		return -1;
+	}
 
 	if (CEILING(bytes, 7) != packages) {
 		return -1;
@@ -71,12 +77,12 @@ int bam_start(BAM_sm_t *bam_sm, uint8_t data[8])
 	bam_sm->bytes = bytes;
 	bam_sm->size = bytes;
 	bam_sm->packages = packages;
-	bam_sm->state = RECEIVING;
+	bam_sm->state = sm_change_state(RECEIVING);
 
 }
 
 
-int bam_feed(BAM_sm_t *bam_sm, uint8_t data[8])
+STATIC int bam_feed(struct BAM_sm_t *bam_sm, uint8_t data[8])
 {
 	if (bam_sm->state != RECEIVING) {
 		bam_sm_reset(bam_sm);
@@ -104,19 +110,20 @@ int bam_feed(BAM_sm_t *bam_sm, uint8_t data[8])
 	}
 
 	for (size_t i = 1; i < 7; i++) {
-		trsb_add_tmp(data[i]);
+		tsrb_add_tmp(data[i]);
 	}
 	bam_sm->bytes = bam_sm->bytes - bytes;
 
 	if (bam_sm->bytes == 0) {
 		tsrb_commit();
 		send_msg(bam_sm->size);
+		bam_sm_reset(bam_sm);
 	}
 
 	return 0;
 }
 
-int p2p_parse(uint8_t data[8])
+STATIC int p2p_parse(uint8_t data[8])
 {
 	size_t bytes = data[0];
 	
@@ -138,7 +145,7 @@ int p2p_parse(uint8_t data[8])
 /* \breif filter out TP_CM and TP_DT from bus packet's id
  *
  */
-uint32_t get_pgn(uint32_t can_id)
+STATIC uint32_t get_pgn(uint32_t can_id)
 {
 	return can_id;
 }
@@ -150,7 +157,7 @@ int feed_parser(uint32_t can_id, uint8_t data[8])
 
 	uint32_t pgn = get_pgn(can_id);
 
-	if ((id != TP_CM) || (id != TP_DM) || (id != P2P_PGN)) {
+	if ((pgn != TP_CM) || (pgn != TP_DT) || (pgn != P2P_PGN)) {
 		return 0;
 	}
 
@@ -173,5 +180,5 @@ int feed_parser(uint32_t can_id, uint8_t data[8])
 		bam_sm_reset(&bam_sm);
 	}
 
-	return res; 
+	return res;
 }

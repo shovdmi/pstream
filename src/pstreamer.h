@@ -13,7 +13,7 @@
 #define CONNECTION_ERROR (-3)
 
 
-#ifdef OVER_CAN
+#ifdef PSTREAMER_OVER_CAN
 // 255 chunks * 7 bytes per chunk
 #  define PACKET_MAX_SIZE (255 * 7)
 #else
