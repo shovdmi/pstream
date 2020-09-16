@@ -108,34 +108,29 @@ int send_over_uart(uint8_t *data, size_t size)
 }
 
 
-enum sm_state_t sm_state = SM_IDLE;
+enum parser_state_t parser_state = SM_IDLE;
 struct packet_t packet;
 
-int sm_reset(void)
+int parser_reset(void)
 {
 	tsrb_reject();
 	memset(&packet, 0, sizeof(struct packet_t));
 	return 0;
 }
 
-uint8_t  bit_stuff(uint8_t data)
-{
-	return data;
-}
-
 int parse_0x7E(void)
 {
-	switch (sm_state)
+	switch (parser_state)
 	{
 		case SM_IDLE:
-			sm_reset();
-			sm_state = sm_change_state(SM_HEADER);
+			parser_reset();
+			parser_state = sm_change_state(SM_HEADER);
 			break;
 		case SM_TAIL_EOF:
 			tsrb_commit();
 			send_msg(packet.bytes_received - TAIL_SIZE - 1); // -1 because we received 0x7E and didn't increased bytes_received yet
-			sm_reset();
-			sm_state = sm_change_state(SM_IDLE);
+			parser_reset();
+			parser_state = sm_change_state(SM_IDLE);
 			break;
 
 		case SM_HEADER:
@@ -146,15 +141,15 @@ int parse_0x7E(void)
 			__attribute__((fallthrough));
 		default:
 			// Frame error
-			sm_reset();
-			sm_state = sm_change_state(SM_HEADER);
+			parser_reset();
+			parser_state = sm_change_state(SM_HEADER);
 			break;
 	}
 
 	return 0;
 }
 
-int packet_sm(uint8_t data)
+int parser_feed(uint8_t data)
 {
 	if (data == 0x7E) {
 		// drop all data except 0x7E if we haven't received SOF or expecting EOF.
@@ -167,12 +162,12 @@ int packet_sm(uint8_t data)
 		packet.prev_data = data;
 	}
 
-	if ((sm_state == SM_HEADER) || (sm_state == SM_PAYLOAD)) {
+	if ((parser_state == SM_HEADER) || (parser_state == SM_PAYLOAD)) {
 		packet.crc = calc_crc16(packet.crc, data);
 	}
 
 
-	switch (sm_state)
+	switch (parser_state)
 	{
 		case SM_IDLE:
 			// reject all the data except 0x7E
@@ -183,18 +178,18 @@ int packet_sm(uint8_t data)
 			if (packet.bytes_received >= HEADER_SIZE) {
 				if (packet.size > PACKET_MAX_SIZE) {
 					// Reset on error
-					sm_reset();
-					sm_state = sm_change_state(SM_IDLE);
+					parser_reset();
+					parser_state = sm_change_state(SM_IDLE);
 				}
 				else {
-					sm_state = sm_change_state(SM_PAYLOAD);
+					parser_state = sm_change_state(SM_PAYLOAD);
 				}
 			}
 			break;
 		case SM_PAYLOAD:
 			tsrb_add_tmp(data);
 			if (packet.size - packet.bytes_received <= TAIL_SIZE) {
-				sm_state = sm_change_state(SM_TAIL_CRC);
+				parser_state = sm_change_state(SM_TAIL_CRC);
 			}
 			break;
 		case SM_TAIL_CRC:
@@ -202,19 +197,19 @@ int packet_sm(uint8_t data)
 			packet.fcs |= data;
 			if (packet.size - packet.bytes_received <= 1) {
 				if (packet.crc == packet.fcs) {
-					sm_state = sm_change_state(SM_TAIL_EOF);
+					parser_state = sm_change_state(SM_TAIL_EOF);
 				}
 				else {
 					// CRC error
-					sm_reset();
-					sm_state = sm_change_state(SM_IDLE);
+					parser_reset();
+					parser_state = sm_change_state(SM_IDLE);
 				}
 			}
 			break;
 		case SM_TAIL_EOF:
 			// We must only get 0x7E if SM in this state, reset otherwise
-			sm_reset();
-			sm_state = sm_change_state(SM_IDLE);
+			parser_reset();
+			parser_state = sm_change_state(SM_IDLE);
 			break;
 
 		default:
@@ -228,6 +223,6 @@ void USART_Handler(void)
 {
 	if (usart_status(USART_RECEIVED)) {
 		uint8_t data = usart_read();
-		packet_sm(data);
+		parser_feed(data);
 	}
 }
