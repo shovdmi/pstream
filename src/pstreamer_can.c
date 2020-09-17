@@ -75,7 +75,6 @@ STATIC int bam_start(struct BAM_sm_t *bam_sm, uint8_t data[8])
 	}
 
 	bam_sm->bytes = bytes;
-	bam_sm->size = bytes;
 	bam_sm->packages = packages;
 	bam_sm->state = sm_change_state(RECEIVING);
 
@@ -115,8 +114,8 @@ STATIC int bam_feed(struct BAM_sm_t *bam_sm, uint8_t data[8])
 	bam_sm->bytes = bam_sm->bytes - bytes;
 
 	if (bam_sm->bytes == 0) {
-		tsrb_commit();
-		send_msg(bam_sm->size);
+		size_t bytes = tsrb_commit();
+		send_msg(bytes);
 		bam_sm_reset(bam_sm);
 	}
 
