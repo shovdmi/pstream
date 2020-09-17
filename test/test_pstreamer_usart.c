@@ -2,13 +2,14 @@
 
 #include "mock_mutex.h"
 #include "mock_usart.h"
+#include "mock_can.h"
 #include "mock_tsrb_ext.h"
 #include "mock_crc.h"
 #include "mock_message.h"
 #include "mock_sm.h"
 #include "pstreamer.h"
 #include "pstreamer_usart.h"
-
+#include "pstreamer_can.h"
 
 extern struct parser_t parser;
 extern enum parser_state_t parser_state;
