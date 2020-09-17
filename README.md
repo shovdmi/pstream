@@ -13,7 +13,7 @@ pstream is a Packet Stream driver for UART and CAN communication
 * Zero-bit-insert/delete functions
 * CRC calculations
 * CAN-bus State-machine tests
-* Thread-safe ring buffer extention (temporary add, reject, commit function)
+* Thread-safe ring buffer extention (temporary add, reject, commit function) [TSRB](https://doc.riot-os.org/group__sys__tsrb.html)
 
 
 ## pstream over USART
